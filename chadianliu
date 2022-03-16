@@ -25,14 +25,6 @@ namespace qudianliu
             InitializeComponent();
         }
 
-        private void GDM_DataReceived(object sender, SerialDataReceivedEventArgs e)
-        {
-            if (comDigitalMeter.BytesToRead > 0)
-            {
-                strMeasureValue = comDigitalMeter.ReadLine();
-            }
-        }
-
         private void InitComPort()
         {   //打开串口并设置量程
             string strChangeRange = "CONF:CURR:DC 0.0005";
