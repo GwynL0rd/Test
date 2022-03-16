@@ -1,0 +1,128 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.IO.Ports;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace qudianliu
+{
+    public partial class Form1 : Form
+    {
+        private SerialPort comDigitalMeter;
+        //private string[] comPortName = new string[2];
+        private string strMeasureValue = "";
+        private double doubleMeasureValue;
+
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void GDM_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            if (comDigitalMeter.BytesToRead > 0)
+            {
+                strMeasureValue = comDigitalMeter.ReadLine();
+            }
+        }
+
+        private void InitComPort()
+        {   //打开串口并设置量程
+            string strChangeRange = "CONF:CURR:DC 0.0005";
+            if (comDigitalMeter == null)
+            {
+                comDigitalMeter = new SerialPort();
+                comDigitalMeter.PortName = comboBox1.Text;
+                comDigitalMeter.BaudRate = 9600;
+                comDigitalMeter.DataBits = 8;
+                comDigitalMeter.StopBits = StopBits.One;
+                comDigitalMeter.Parity = Parity.None;
+                comDigitalMeter.NewLine = "\r\n";
+            }
+            try
+            {
+                comDigitalMeter.DataReceived += new SerialDataReceivedEventHandler(GDM_DataReceived);
+                comDigitalMeter.Open();
+                //comSwitch.Open();
+                comDigitalMeter.WriteLine(strChangeRange);
+                //DisplaylistMSG("Set uA range OK");
+            }
+            catch (Exception ex)
+            {
+                lbConnState.Text = "无法打开串口";
+                throw;
+                
+                //DisplaylistMSG(ex.Message);
+                //Flag = false;
+            }
+            lbConnState.Text = "串口已打开";
+        }
+
+        private string SMeasureValue = "";  //测量结果
+        private double DMeasureValue = 0.0; //测量结果
+
+        //GDM端口回传事件
+        private void GDMDataReceive(object sender, SerialDataReceivedEventArgs e)
+        {
+            if (comDigitalMeter.BytesToRead > 0)
+            {
+                SMeasureValue = comDigitalMeter.ReadLine();
+            }
+        }
+
+        /* string -> double */
+        public bool CheckMeasureValue(string str)
+        {
+            double dValue = 0.0;
+            DMeasureValue = 0.0;
+            if (double.TryParse(str, out dValue))
+            {
+                DMeasureValue = dValue;
+                return true;
+            }
+            return false;
+        }
+
+        //获取电表显示的值
+        private void GetMeasureValue()
+        {
+            int num = 5;
+            while (num != 0)
+            {
+                strMeasureValue = "";
+                doubleMeasureValue = 0.0;
+                comDigitalMeter.WriteLine(":VAL1?");
+                Thread.Sleep(500);
+                num--;
+                if (!string.IsNullOrEmpty(strMeasureValue) && CheckMeasureValue(strMeasureValue))
+                {
+                    break;
+                }
+            }
+        }
+
+
+        private void btnConnect_Click(object sender, EventArgs e)
+        {
+            InitComPort();
+        }
+
+        private void btnSend_Click(object sender, EventArgs e)
+        {
+            /* 开始读值 */
+            //Thread.Sleep(DelayBeforeMeasure);
+            GetMeasureValue();
+            double value = DMeasureValue * 1000;
+            //DisplayListMSG($"Current Test-->{value} mA");
+            txtResult.Text = value.ToString();
+
+        }
+    }
+}
